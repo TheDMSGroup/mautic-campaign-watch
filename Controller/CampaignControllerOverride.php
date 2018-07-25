@@ -38,10 +38,20 @@ class CampaignControllerOverride extends CampaignController
                 ],
                 'passthroughVars' => [
                     'route' => false,
+                    'mauticContent' => null,
                 ],
                 'contentTemplate' => 'MauticCampaignWatchBundle:Campaign:leads.html.php',
+                // 'contentTemplate' => 'MauticCampaignWatchBundle:Campaign:leads.html.php',
             ]
         );
+        // return $this->render(
+        //     'MauticCampaignWatchBundle:Campaign:Leads',
+        //     [
+        //         'events'        => null,
+        //         'contactSource' => null,
+        //         'tmpl'          => 'MauticCampaignWatchBundle:Campaign:leads.html.php',
+        //     ]
+        // );
         // @todo - see if we can avoid re-inventing the stone wheel and do the following via ajax purely?
         // //set some permissions
         // $permissions = $this->get('mautic.security')->isGranted(
