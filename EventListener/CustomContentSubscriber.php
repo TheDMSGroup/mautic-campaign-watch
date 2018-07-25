@@ -15,36 +15,12 @@ use Mautic\CoreBundle\CoreEvents;
 use Mautic\CoreBundle\Event\CustomAssetsEvent;
 use Mautic\CoreBundle\Event\CustomContentEvent;
 use Mautic\CoreBundle\EventListener\CommonSubscriber;
-use Mautic\DashboardBundle\Model\DashboardModel;
-use MauticPlugin\MauticContactLedgerBundle\Model\LedgerEntryModel;
 
 /**
  * Class CustomContentSubscriber.
  */
 class CustomContentSubscriber extends CommonSubscriber
 {
-    /**
-     * @var LedgerEntryModel
-     */
-    protected $ledgerEntryModel;
-
-    /**
-     * @var DashboardModel
-     */
-    protected $dashboardModel;
-
-    /**
-     * CustomContentSubscriber constructor.
-     *
-     * @param LedgerEntryModel $ledgerEntryModel
-     * @param DashboardModel   $dashboardModel
-     */
-    public function __construct(LedgerEntryModel $ledgerEntryModel, DashboardModel $dashboardModel)
-    {
-        $this->ledgerEntryModel = $ledgerEntryModel;
-        $this->dashboardModel   = $dashboardModel;
-    }
-
     /**
      * @return array
      */
@@ -84,44 +60,44 @@ class CustomContentSubscriber extends CommonSubscriber
     public function getContentInjection(CustomContentEvent $event)
     {
         $tmp = 1;
-        switch ($event->getViewName()) {
-            case 'MauticCampaignBundle:Campaign:details.html.php':
-                if ('left.section.top' === $event->getContext()) {
-                    /** @var \DateTime[] $dateRange */
-                    // $dateRange = $this->request->request->get('daterange', []);
-                    //
-                    // if (empty($dateRange)) {
-                    //     $dateRange = $this->dashboardModel->getDefaultFilter();
-                    //     $dateFrom  = $dateRange['date_from'] = $dateRange['dateFrom'];
-                    //     $dateTo    = $dateRange['date_to'] = $dateRange['dateTo'];
-                    // } else {
-                    //     $dateFrom = $dateRange['dateFrom'] = new \DateTime($dateRange['date_from']);
-                    //     $dateTo   = $dateRange['dateTo'] = new \DateTime($dateRange['date_to']);
-                    // }
-                    //
-                    // /** @var array $vars */
-                    // $vars = $event->getVars();
-                    //
-                    // /** @var mixed $chartData */
-                    // $chartData = null;
-                    //
-                    // /** @var string $chartTemplate */
-                    // $chartTemplate = '';
-                    //
-                    // if (isset($vars['campaign'])) {
-                    //     $chartTemplate = 'MauticContactLedgerBundle:Charts:campaign_revenue_chart.html.php';
-                    //     $chartData     = $this->ledgerEntryModel->getCampaignRevenueChartData(
-                    //         $vars['campaign'],
-                    //         $dateFrom,
-                    //         $dateTo
-                    //     );
-                    // }
-                    $event->addTemplate('MauticContactLedgerBundle:Charts:campaign_revenue_chart.html.php', [
-                        'campaignRevenueChartData' => [],
-                    ]);
-                }
-                break;
-            //default:
-        }
+        // switch ($event->getViewName()) {
+        //     case 'MauticCampaignBundle:Campaign:details.html.php':
+        //         if ('left.section.top' === $event->getContext()) {
+        //             /** @var \DateTime[] $dateRange */
+        //             // $dateRange = $this->request->request->get('daterange', []);
+        //             //
+        //             // if (empty($dateRange)) {
+        //             //     $dateRange = $this->dashboardModel->getDefaultFilter();
+        //             //     $dateFrom  = $dateRange['date_from'] = $dateRange['dateFrom'];
+        //             //     $dateTo    = $dateRange['date_to'] = $dateRange['dateTo'];
+        //             // } else {
+        //             //     $dateFrom = $dateRange['dateFrom'] = new \DateTime($dateRange['date_from']);
+        //             //     $dateTo   = $dateRange['dateTo'] = new \DateTime($dateRange['date_to']);
+        //             // }
+        //             //
+        //             // /** @var array $vars */
+        //             // $vars = $event->getVars();
+        //             //
+        //             // /** @var mixed $chartData */
+        //             // $chartData = null;
+        //             //
+        //             // /** @var string $chartTemplate */
+        //             // $chartTemplate = '';
+        //             //
+        //             // if (isset($vars['campaign'])) {
+        //             //     $chartTemplate = 'MauticContactLedgerBundle:Charts:campaign_revenue_chart.html.php';
+        //             //     $chartData     = $this->ledgerEntryModel->getCampaignRevenueChartData(
+        //             //         $vars['campaign'],
+        //             //         $dateFrom,
+        //             //         $dateTo
+        //             //     );
+        //             // }
+        //             $event->addTemplate('MauticContactLedgerBundle:Charts:campaign_revenue_chart.html.php', [
+        //                 'campaignRevenueChartData' => [],
+        //             ]);
+        //         }
+        //         break;
+        //     //default:
+        // }
     }
 }
