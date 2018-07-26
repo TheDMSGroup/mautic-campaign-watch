@@ -9,18 +9,18 @@
  * @license     GNU/GPLv3 http://www.gnu.org/licenses/gpl-3.0.html
  */
 
-namespace MauticPlugin\MauticContactLedgerBundle\EventListener;
+namespace MauticPlugin\MauticCampaignWatchBundle\EventListener;
 
 use Mautic\CoreBundle\CoreEvents;
-use Mautic\CoreBundle\Event\CustomAssetsEvent;
 use Mautic\CoreBundle\Event\CustomContentEvent;
 use Mautic\CoreBundle\EventListener\CommonSubscriber;
 
 /**
- * Class CustomContentSubscriber.
+ * Class CustomContentSubscriber
  */
 class CustomContentSubscriber extends CommonSubscriber
 {
+
     /**
      * @return array
      */
@@ -28,76 +28,24 @@ class CustomContentSubscriber extends CommonSubscriber
     {
         return [
             CoreEvents::VIEW_INJECT_CUSTOM_CONTENT => ['getContentInjection', 0],
-            CoreEvents::VIEW_INJECT_CUSTOM_ASSETS  => ['getAssetInjection', 0],
         ];
     }
 
     /**
-     * @param CustomAssetsEvent $event
-     *
-     * @return CustomAssetsEvent
-     */
-    public function getAssetInjection(CustomAssetsEvent $event)
-    {
-        $tmp = 1;
-        // $location = $this->router->getContext()->getPathInfo();
-        //
-        // if (preg_match('#campaigns/view/\d+$#', $location)) {
-        //     $event->addScript('plugins/MauticContactLedgerBundle/Assets/js/datatables.min.js', 'bodyClose');
-        //     $event->addStylesheet('plugins/MauticContactLedgerBundle/Assets/css/datatables.min.css');
-        // }
-        //
-        // return $event;
-    }
-
-    /**
      * @param CustomContentEvent $event
-     *
-     * @return CustomContentEvent
-     *
-     * @throws \Doctrine\DBAL\DBALException
      */
     public function getContentInjection(CustomContentEvent $event)
     {
-        $tmp = 1;
-        // switch ($event->getViewName()) {
-        //     case 'MauticCampaignBundle:Campaign:details.html.php':
-        //         if ('left.section.top' === $event->getContext()) {
-        //             /** @var \DateTime[] $dateRange */
-        //             // $dateRange = $this->request->request->get('daterange', []);
-        //             //
-        //             // if (empty($dateRange)) {
-        //             //     $dateRange = $this->dashboardModel->getDefaultFilter();
-        //             //     $dateFrom  = $dateRange['date_from'] = $dateRange['dateFrom'];
-        //             //     $dateTo    = $dateRange['date_to'] = $dateRange['dateTo'];
-        //             // } else {
-        //             //     $dateFrom = $dateRange['dateFrom'] = new \DateTime($dateRange['date_from']);
-        //             //     $dateTo   = $dateRange['dateTo'] = new \DateTime($dateRange['date_to']);
-        //             // }
-        //             //
-        //             // /** @var array $vars */
-        //             // $vars = $event->getVars();
-        //             //
-        //             // /** @var mixed $chartData */
-        //             // $chartData = null;
-        //             //
-        //             // /** @var string $chartTemplate */
-        //             // $chartTemplate = '';
-        //             //
-        //             // if (isset($vars['campaign'])) {
-        //             //     $chartTemplate = 'MauticContactLedgerBundle:Charts:campaign_revenue_chart.html.php';
-        //             //     $chartData     = $this->ledgerEntryModel->getCampaignRevenueChartData(
-        //             //         $vars['campaign'],
-        //             //         $dateFrom,
-        //             //         $dateTo
-        //             //     );
-        //             // }
-        //             $event->addTemplate('MauticContactLedgerBundle:Charts:campaign_revenue_chart.html.php', [
-        //                 'campaignRevenueChartData' => [],
-        //             ]);
-        //         }
-        //         break;
-        //     //default:
-        // }
+        switch ($event->getViewName()) {
+            case 'MauticCampaignBundle:Campaign:details.html.php':
+                switch ($event->getContext()) {
+                    case 'tabs':
+                        // Add tab.
+                    case 'tab.content':
+                        // Add tab content.
+                }
+                break;
+        }
+
     }
 }

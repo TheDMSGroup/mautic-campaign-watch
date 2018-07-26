@@ -1,0 +1,44 @@
+#leads-container .pa-md.bg-auto {
+    background-color: transparent !important;
+}
+
+#leads-container .panel-footer {
+    margin: 0 -15px -15px -15px;
+}
+
+#leads-container .col-sm-6,
+#leads-container .col-lg-4 {
+    width: 100%;
+}
+
+#leads-container .panel-body {
+    padding: 5px;
+}
+
+#leads-container .panel-body .ellipsis {
+    float: left;
+    width: 24%;
+    padding: 7px 0 0 0;
+}
+
+#leads-container .panel-body > div > img.ml-sm {
+    position: relative;
+    top: 16px;
+}
+
+#leads-container .panel {
+    height: 32px;
+    margin-bottom: 3px;
+}
+
+#leads-container .contact-cards .img {
+    max-height: 32px;
+}
+
+#leads-container .ovf-h {
+    min-height: 45px;
+}
+
+#leads-container .ovf-h .box-layout .col-xs-4 {
+    width: 32px;
+}

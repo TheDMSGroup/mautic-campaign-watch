@@ -42,12 +42,16 @@ class ControllerSubscriber extends CommonSubscriber
         /** @var array $controller */
         $controller = $event->getController();
         if (
-            2 === count($controller)
+            isset($controller[0])
+            && isset($controller[1])
             && $controller[0] instanceof CampaignController
             && 'contactsAction' === $controller[1]
+            && ($request = $event->getRequest())
+            && !$request->isXmlHttpRequest()
+            && $request->get('legacy') === null
         ) {
             $controller = new CampaignControllerOverride();
-            $controller->setRequest($event->getRequest());
+            $controller->setRequest($request);
             $controller->setContainer($this->dispatcher->getContainer());
             $event->setController([$controller, 'contactsAction']);
         }

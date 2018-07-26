@@ -16,7 +16,7 @@ return [
     'author'      => 'Heath Dutton',
     'routes'      => [
         'main' => [
-            'mautic_campaignwatch_contacts'     => [
+            'mautic_campaignwatch_contacts' => [
                 'path'       => '/campaignwatch/view/{objectId}/contact/{page}',
                 'controller' => 'MauticCampaignWatchBundle:Campaign:contacts',
             ],
@@ -24,8 +24,11 @@ return [
     ],
     'services'    => [
         'events' => [
-            'mautic.campaignwatch.subscriber.controller' => [
+            'mautic.campaignwatch.subscriber.controller'    => [
                 'class' => 'MauticPlugin\MauticCampaignWatchBundle\EventListener\ControllerSubscriber',
+            ],
+            'mautic.campaignwatch.subscriber.customcontent' => [
+                'class' => 'MauticPlugin\MauticCampaignWatchBundle\EventListener\CustomContentSubscriber',
             ],
         ],
     ],
