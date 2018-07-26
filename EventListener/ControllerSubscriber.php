@@ -17,13 +17,11 @@ use MauticPlugin\MauticCampaignWatchBundle\Controller\CampaignControllerOverride
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
-
 /**
  * Class CustomContentSubscriber.
  */
 class ControllerSubscriber extends CommonSubscriber
 {
-
     /**
      * @return array
      */
@@ -48,7 +46,7 @@ class ControllerSubscriber extends CommonSubscriber
             && 'contactsAction' === $controller[1]
             && ($request = $event->getRequest())
             && !$request->isXmlHttpRequest()
-            && $request->get('legacy') === null
+            && null === $request->get('legacy')
         ) {
             $controller = new CampaignControllerOverride();
             $controller->setRequest($request);

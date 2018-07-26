@@ -16,11 +16,10 @@ use Mautic\CoreBundle\Event\CustomContentEvent;
 use Mautic\CoreBundle\EventListener\CommonSubscriber;
 
 /**
- * Class CustomContentSubscriber
+ * Class CustomContentSubscriber.
  */
 class CustomContentSubscriber extends CommonSubscriber
 {
-
     /**
      * @return array
      */
@@ -46,6 +45,5 @@ class CustomContentSubscriber extends CommonSubscriber
                 }
                 break;
         }
-
     }
 }

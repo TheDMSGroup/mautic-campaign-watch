@@ -14,11 +14,10 @@ namespace MauticPlugin\MauticCampaignWatchBundle\Controller;
 use Mautic\CampaignBundle\Controller\CampaignController;
 
 /**
- * Class CampaignControllerOverride
+ * Class CampaignControllerOverride.
  */
 class CampaignControllerOverride extends CampaignController
 {
-
     /**
      * Alternative of 'MauticCampaignBundle:Campaign:contacts'
      * Gets contacts as a list.
@@ -37,7 +36,7 @@ class CampaignControllerOverride extends CampaignController
                     'objectId' => $objectId,
                 ],
                 'passthroughVars' => [
-                    'route' => false,
+                    'route'         => false,
                     'mauticContent' => null,
                 ],
                 'contentTemplate' => 'MauticCampaignWatchBundle:Campaign:leads.html.php',
