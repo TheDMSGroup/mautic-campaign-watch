@@ -79,7 +79,7 @@ class ExportController extends CommonController
                     }
                     $start = $start + $params['limit'];
                     $this->container->get('doctrine.orm.entity_manager')->clear();
-                    gc_enable() ;
+                    gc_enable();
                     gc_collect_cycles();
                 }
                 fclose($handle);
