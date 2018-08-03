@@ -20,6 +20,10 @@ return [
                 'path'       => '/campaignwatch/view/{objectId}/contact/{page}',
                 'controller' => 'MauticCampaignWatchBundle:Campaign:contacts',
             ],
+            'mautic_campaignwatch_contacts_export' => [
+                'path'       => '/campaignwatch/export/{campaignId}/{dateFrom}/{dateTo}',
+                'controller' => 'MauticCampaignWatchBundle:Export:campaignContactsExport',
+            ],
         ],
     ],
     'services'    => [
