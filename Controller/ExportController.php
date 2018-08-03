@@ -76,12 +76,11 @@ class ExportController extends CommonController
                             $headersWritten = true;
                         }
                         fputcsv($handle, array_values($contact));
-                        $this->container->get('doctrine.orm.entity_manager')->clear();
-                        gc_enable() ;
-                        gc_collect_cycles();
-
                     }
                     $start = $start + $params['limit'];
+                    $this->container->get('doctrine.orm.entity_manager')->clear();
+                    gc_enable() ;
+                    gc_collect_cycles();
                 }
                 fclose($handle);
             }
