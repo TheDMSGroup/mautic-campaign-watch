@@ -40,7 +40,8 @@ class ControllerSubscriber extends CommonSubscriber
         /** @var array $controller */
         $controller = $event->getController();
         if (
-            isset($controller[0])
+            is_array($controller)
+            && isset($controller[0])
             && isset($controller[1])
             && $controller[0] instanceof CampaignController
             && 'contactsAction' === $controller[1]
