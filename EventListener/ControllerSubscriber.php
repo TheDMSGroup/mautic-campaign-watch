@@ -43,11 +43,13 @@ class ControllerSubscriber extends CommonSubscriber
             is_array($controller)
             && isset($controller[0])
             && isset($controller[1])
-            && $controller[0] instanceof CampaignController
             && 'contactsAction' === $controller[1]
+            && $controller[0] instanceof CampaignController
             && ($request = $event->getRequest())
-            && !$request->isXmlHttpRequest()
-            && null === $request->get('legacy')
+            && (
+                !$request->isXmlHttpRequest()
+                || $event->getRequest()->get('ignoreAjax')
+            )
         ) {
             $controller = new CampaignControllerOverride();
             $controller->setRequest($request);
