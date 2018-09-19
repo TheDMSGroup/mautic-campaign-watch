@@ -13,6 +13,7 @@ namespace MauticPlugin\MauticCampaignWatchBundle\EventListener;
 
 use Mautic\CampaignBundle\Controller\CampaignController;
 use Mautic\CoreBundle\EventListener\CommonSubscriber;
+use Mautic\PluginBundle\Helper\IntegrationHelper;
 use MauticPlugin\MauticCampaignWatchBundle\Controller\CampaignControllerOverride;
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -42,19 +43,42 @@ class ControllerSubscriber extends CommonSubscriber
         if (
             is_array($controller)
             && isset($controller[0])
-            && isset($controller[1])
-            && 'contactsAction' === $controller[1]
             && $controller[0] instanceof CampaignController
+            && isset($controller[1])
             && ($request = $event->getRequest())
             && (
                 !$request->isXmlHttpRequest()
                 || $event->getRequest()->get('ignoreAjax')
             )
         ) {
-            $controller = new CampaignControllerOverride();
-            $controller->setRequest($request);
-            $controller->setContainer($this->dispatcher->getContainer());
-            $event->setController([$controller, 'contactsAction']);
+            $container = $this->dispatcher->getContainer();
+            switch ($controller[1]) {
+                case 'contactAction':
+                    $controller = new CampaignControllerOverride();
+                    $controller->setRequest($request);
+                    $controller->setContainer($container);
+                    $event->setController([$controller, 'contactsAction']);
+                    break;
+                case 'executeAction':
+                    $stop = 'here';
+                    /** @var IntegrationHelper $integrationHelper */
+                    $routeVars = $request->attributes->get('_route_params');
+                    if (isset($routeVars['objectAction']) && 'view' === $routeVars['objectAction']) {
+                        $settings = $container->get('mautic.helper.integration')->getIntegrationSettings();
+                        $campaignWatchSettings = $settings['CampaignWatch']->getFeatureSettings();
+
+                        if (
+                            isset($campaignWatchSettings['campaign_detail_stat_chart_toggle'])
+                            && $campaignWatchSettings['campaign_detail_stat_chart_toggle']
+                        ) {
+                            $controller = new CampaignControllerOverride();
+                            $controller->setRequest($request);
+                            $controller->setContainer($container);
+                            $event->setController([$controller, 'viewAction']);
+                        }
+                    }
+                    break;
+            }
         }
     }
 }
