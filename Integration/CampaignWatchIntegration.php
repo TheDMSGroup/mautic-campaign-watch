@@ -11,6 +11,7 @@
 
 namespace MauticPlugin\MauticCampaignWatchBundle\Integration;
 
+use Mautic\CoreBundle\Form\Type\YesNoButtonGroupType;
 use Mautic\PluginBundle\Integration\AbstractIntegration;
 
 /**
@@ -40,5 +41,26 @@ class CampaignWatchIntegration extends AbstractIntegration
     public function getAuthenticationType()
     {
         return 'none';
+    }
+
+    public function appendToForm(&$builder, $data, $formArea)
+    {
+        if ('features' === $formArea) {
+            $builder->create(
+                'campaign_detail_stat_chart_toggle',
+                YesNoButtonGroupType::class,
+                [
+                    'label'       => 'mautic.campaign_watch.stat_chart.toggle.label',
+                    'label_attr'  => [
+                        'class' => 'control-label',
+                    ],
+                    'data'        => isset($data['campaign_detail_stat_chart_toggle']) ? isset($data['campaign_detail_stat_chart_toggle']) : false,
+                    'attr'        => [
+                        'class'   => 'form-control',
+                        'tooltip' => $this->translator->trans('mautic.campaign_watch.stat_chart.toggle.tooltip'),
+                    ],
+                ]
+            );
+        }
     }
 }
