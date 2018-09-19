@@ -189,6 +189,7 @@ class CampaignControllerOverride extends CampaignController
         $entity   = $args['entity'];
         $objectId = $args['objectId'];
         // Init the date range filter form
+        $this->setCoreParametersHelper($this->container->get('mautic.config'));
         $tabDataToggleDefault = $this->coreParametersHelper->getParameter('event_log_date_toggle');
         $dateRangeValues      = $this->request->get('daterange', []);
         $tabDataMode          = empty($dateRangeValues) && $tabDataToggleDefault ?
@@ -269,7 +270,7 @@ class CampaignControllerOverride extends CampaignController
             $sortedEvents[$event['eventType']][] = $event;
         }
 
-        + $session = $this->get('session');
+        $session = $this->get('session');
 
         $campaignSources = $this->getCampaignModel()->getSourceLists();
 
