@@ -13,7 +13,6 @@ namespace MauticPlugin\MauticCampaignWatchBundle\EventListener;
 
 use Mautic\CampaignBundle\Controller\CampaignController;
 use Mautic\CoreBundle\EventListener\CommonSubscriber;
-use Mautic\PluginBundle\Helper\IntegrationHelper;
 use MauticPlugin\MauticCampaignWatchBundle\Controller\CampaignControllerOverride;
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -60,11 +59,9 @@ class ControllerSubscriber extends CommonSubscriber
                     $event->setController([$controller, 'contactsAction']);
                     break;
                 case 'executeAction':
-                    $stop = 'here';
-                    /** @var IntegrationHelper $integrationHelper */
                     $routeVars = $request->attributes->get('_route_params');
                     if (isset($routeVars['objectAction']) && 'view' === $routeVars['objectAction']) {
-                        $settings = $container->get('mautic.helper.integration')->getIntegrationSettings();
+                        $settings              = $container->get('mautic.helper.integration')->getIntegrationSettings();
                         $campaignWatchSettings = $settings['CampaignWatch']->getFeatureSettings();
 
                         if (

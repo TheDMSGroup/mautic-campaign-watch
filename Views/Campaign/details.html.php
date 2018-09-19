@@ -101,16 +101,16 @@ switch (true) {
                                 </tr>
                             <?php endif; ?>
                             <?php foreach ($sources as $sourceType => $typeNames): ?>
-                            <?php if (!empty($typeNames)): ?>
-                            <tr>
-                                <td width="20%"><span class="fw-b">
+                                <?php if (!empty($typeNames)): ?>
+                                    <tr>
+                                        <td width="20%"><span class="fw-b">
                                     <?php echo $view['translator']->trans('mautic.campaign.leadsource.'.$sourceType); ?>
-                                </td>
-                                <td>
-                                    <?php echo implode(', ', $typeNames); ?>
-                                </td>
-                            </tr>
-                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php echo implode(', ', $typeNames); ?>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                             </tbody>
                         </table>
@@ -126,14 +126,41 @@ switch (true) {
                 <span data-toggle="tooltip" title="Detail">
                     <a href="javascript:void(0)" class="arrow text-muted collapsed" data-toggle="collapse"
                        data-target="#campaign-details"><span
-                            class="caret"></span> <?php echo $view['translator']->trans('mautic.core.details'); ?></a>
+                                class="caret"></span> <?php echo $view['translator']->trans('mautic.core.details'); ?></a>
                 </span>
             </div>
             <!--/ campaign detail collapseable toggler -->
 
             <?php echo $view['content']->getCustomContent('left.section.top', $mauticTemplateVars); ?>
-
             <!-- some stats -->
+            <div class="pa-md">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="panel">
+                            <div class="panel-body box-layout">
+                                <div class="col-md-3 va-m">
+                                    <h5 class="text-white dark-md fw-sb mb-xs">
+                                        <span class="fa fa-line-chart"></span>
+                                        <?php //echo $view['translator']->trans('mautic.campaign.stats');?>
+                                    </h5>
+                                </div>
+                                <div class="col-md-9 va-m">
+                                    <?php echo $view->render(
+                                        'MauticCoreBundle:Helper:graph_dateselect.html.php',
+                                        ['dateRangeForm' => $dateRangeForm, 'class' => 'pull-right']
+                                    ); ?>
+                                </div>
+                            </div>
+                            <div class="pt-0 pl-15 pb-10 pr-15">
+                                <?php /* echo $view->render(
+                                    'MauticCoreBundle:Helper:chart.html.php',
+                                    ['chartData' => $stats, 'chartType' => 'line', 'chartHeight' => 300]
+                                ); */ ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!--/ stats -->
 
             <?php echo $view['content']->getCustomContent('details.stats.graph.below', $mauticTemplateVars); ?>
@@ -141,7 +168,7 @@ switch (true) {
             <!-- tabs controls -->
             <ul class="nav nav-tabs pr-md pl-md">
                 <?php if ($preview): ?>
-                     <li class="<?php if ('preview' == $firstTab): echo 'active'; endif; ?>">
+                    <li class="<?php if ('preview' == $firstTab): echo 'active'; endif; ?>">
                         <a href="#preview-container" role="tab" data-toggle="tab">
                             <?php echo $view['translator']->trans('mautic.campaign.preview.header'); ?>
                         </a>
@@ -183,10 +210,10 @@ switch (true) {
             <!-- #events-container -->
             <!-- BEGIN toggle view type -->
             <?php
-               $hideDataToggle = '';
-                if (!in_array($firstTab, ['action', 'condition', 'decision'])) {
-                    $hideDataToggle = " style='display:none; '";
-                }
+            $hideDataToggle = '';
+            if (!in_array($firstTab, ['action', 'condition', 'decision'])) {
+                $hideDataToggle = " style='display:none; '";
+            }
             ?>
             <div id="campaignTabDataToggle" class="form-group" <?php echo $hideDataToggle; ?>>
                 <label class="control-label">Show Results As</label>
