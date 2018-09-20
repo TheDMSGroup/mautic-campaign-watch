@@ -270,14 +270,6 @@ class CampaignControllerOverride extends CampaignController
             $sortedEvents[$event['eventType']][] = $event;
         }
 
-        $stats = $this->getCampaignModel()->getCampaignMetricsLineChartData(
-            null,
-            new \DateTime($dateRangeForm->get('date_from')->getData()),
-            new \DateTime($dateRangeForm->get('date_to')->getData()),
-            null,
-            ['campaign_id' => $objectId]
-        );
-
         $session = $this->get('session');
 
         $campaignSources = $this->getCampaignModel()->getSourceLists();
@@ -289,7 +281,6 @@ class CampaignControllerOverride extends CampaignController
             $args['viewParameters'],
             [
                 'campaign'        => $entity,
-                'stats'           => $stats,
                 'events'          => $sortedEvents,
                 'eventSettings'   => $this->getCampaignModel()->getEvents(),
                 'tags'            => $this->getCampaignModel()->getTagList(),
