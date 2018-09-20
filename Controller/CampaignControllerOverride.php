@@ -176,4 +176,140 @@ class CampaignControllerOverride extends CampaignController
         //     ]
         // );
     }
+
+    /**
+     * @param array $args
+     * @param       $action
+     *
+     * @return array
+     */
+    protected function getViewArguments(array $args, $action)
+    {
+        /** @var Campaign $entity */
+        $entity   = $args['entity'];
+        $objectId = $args['objectId'];
+        // Init the date range filter form
+        $this->setCoreParametersHelper($this->container->get('mautic.config'));
+        $tabDataToggleDefault = $this->coreParametersHelper->getParameter('event_log_date_toggle');
+        $dateRangeValues      = $this->request->get('daterange', []);
+        $tabDataMode          = empty($dateRangeValues) && $tabDataToggleDefault ?
+            [
+                'toDate' => ['class' => 'btn-success', 'checked' => 'checked="checked"'],
+                'byDate' => ['class' => '', 'checked' => ''],
+            ] :
+            [
+                'toDate' => ['class' => '', 'checked' => ''],
+                'byDate' => ['class' => 'btn-success', 'checked' => 'checked="checked"'],
+            ];
+        $action          = $this->generateUrl(
+            'mautic_campaign_action',
+            ['objectAction' => 'view', 'objectId' => $objectId]
+        );
+        $dateRangeForm   = $this->get('form.factory')->create(
+            'daterange',
+            $dateRangeValues,
+            ['action' => $action]
+        );
+
+        // prepare date values to pass in to event query
+        $dateFrom = (empty($dateRangeValues['date_from'])) ?
+            new \DateTime('-30 days midnight')
+            :
+            new \DateTime($dateRangeValues['date_from']);
+
+        $dateTo                       = (empty($dateRangeValues['date_to']))
+            ?
+            new \DateTime('midnight')
+            :
+            new \DateTime($dateRangeValues['date_to']);
+        $dateRangeValues['date_from'] = $dateFrom;
+        $dateRangeValues['date_to']   = $dateTo;
+
+        /** @var LeadEventLogRepository $eventLogRepo */
+        $eventLogRepo      = $this->getDoctrine()->getManager()->getRepository(
+            'MauticCampaignBundle:LeadEventLog'
+        );
+        $events            = $this->getCampaignModel()->getEventRepository()->getCampaignEvents(
+            $entity->getId()
+        );
+        $leadCount         = $this->getCampaignModel()->getRepository()->getCampaignLeadCount(
+            $entity->getId(),
+            null,
+            [],
+            $dateRangeValues
+        );
+        $campaignLogCounts = $eventLogRepo->getCampaignLogCounts(
+            $entity->getId(),
+            false,
+            false,
+            $dateRangeValues
+        );
+        $sortedEvents      = [
+            'decision'  => [],
+            'action'    => [],
+            'condition' => [],
+        ];
+
+        foreach ($events as $event) {
+            $event['logCount']   =
+            $event['percent']    =
+            $event['yesPercent'] =
+            $event['noPercent']  = 0;
+            $event['leadCount']  = $leadCount;
+
+            if (isset($campaignLogCounts[$event['id']])) {
+                $event['logCount'] = array_sum($campaignLogCounts[$event['id']]);
+
+                if ($leadCount) {
+                    $event['percent']    = round(($event['logCount'] / $leadCount) * 100, 1);
+                    $event['yesPercent'] = round(($campaignLogCounts[$event['id']][1] / $leadCount) * 100, 1);
+                    $event['noPercent']  = round(($campaignLogCounts[$event['id']][0] / $leadCount) * 100, 1);
+                }
+            }
+
+            $sortedEvents[$event['eventType']][] = $event;
+        }
+
+        $stats = $this->getCampaignModel()->getCampaignMetricsLineChartData(
+            null,
+            new \DateTime($dateRangeForm->get('date_from')->getData()),
+            new \DateTime($dateRangeForm->get('date_to')->getData()),
+            null,
+            ['campaign_id' => $objectId]
+        );
+
+        $session = $this->get('session');
+
+        $campaignSources = $this->getCampaignModel()->getSourceLists();
+
+        $this->prepareCampaignSourcesForEdit($objectId, $campaignSources, true);
+        $this->prepareCampaignEventsForEdit($entity, $objectId, true);
+
+        $args['viewParameters'] = array_merge(
+            $args['viewParameters'],
+            [
+                'campaign'        => $entity,
+                'stats'           => $stats,
+                'events'          => $sortedEvents,
+                'eventSettings'   => $this->getCampaignModel()->getEvents(),
+                'tags'            => $this->getCampaignModel()->getTagList(),
+                'sources'         => $this->getCampaignModel()->getLeadSources($entity),
+                'dateRangeForm'   => $dateRangeForm->createView(),
+                'campaignSources' => $this->campaignSources,
+                'campaignEvents'  => $events,
+                'campaignLeads'   => $this->forward(
+                    'MauticCampaignBundle:Campaign:contacts',
+                    [
+                        'objectId'   => $entity->getId(),
+                        'page'       => $this->get('session')->get('mautic.campaign.contact.page', 1),
+                        'ignoreAjax' => true,
+                    ]
+                )->getContent(),
+                'tabDataMode'     => $tabDataMode,
+            ]
+        );
+        // $args['contentTemplate'] = 'MauticCampaignWatchBundle:Campaign:details.html.php';
+
+        return $args;
+    }
 }
