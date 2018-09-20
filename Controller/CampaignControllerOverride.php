@@ -308,7 +308,7 @@ class CampaignControllerOverride extends CampaignController
                 'tabDataMode'     => $tabDataMode,
             ]
         );
-        $args['contentTemplate'] = 'MauticCampaignWatchBundle:Campaign:details.html.php';
+        // $args['contentTemplate'] = 'MauticCampaignWatchBundle:Campaign:details.html.php';
 
         return $args;
     }
