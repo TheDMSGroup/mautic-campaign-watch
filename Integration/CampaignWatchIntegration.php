@@ -54,7 +54,7 @@ class CampaignWatchIntegration extends AbstractIntegration
                     'label_attr'  => [
                         'class' => 'control-label',
                     ],
-                    'data'        => isset($data['campaign_detail_stat_chart_toggle']) ? isset($data['campaign_detail_stat_chart_toggle']) : false,
+                    'data'        => isset($data['campaign_detail_stat_chart_toggle']) ? (bool) $data['campaign_detail_stat_chart_toggle'] : false,
                     'attr'        => [
                         'class'   => 'form-control',
                         'tooltip' => $this->translator->trans('mautic.campaignwatch.stat_chart.toggle.tooltip'),
