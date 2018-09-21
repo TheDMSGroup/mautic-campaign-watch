@@ -45,18 +45,19 @@ class ControllerSubscriber extends CommonSubscriber
             && $controller[0] instanceof CampaignController
             && isset($controller[1])
             && ($request = $event->getRequest())
-            && (
-                !$request->isXmlHttpRequest()
-                || $event->getRequest()->get('ignoreAjax')
-            )
         ) {
             $container = $this->dispatcher->getContainer();
             switch ($controller[1]) {
-                case 'contactAction':
-                    $controller = new CampaignControllerOverride();
-                    $controller->setRequest($request);
-                    $controller->setContainer($container);
-                    $event->setController([$controller, 'contactsAction']);
+                case 'contactsAction':
+                    if (
+                        !$request->isXmlHttpRequest()
+                        || $event->getRequest()->get('ignoreAjax')
+                    ) {
+                        $controller = new CampaignControllerOverride();
+                        $controller->setRequest($request);
+                        $controller->setContainer($container);
+                        $event->setController([$controller, 'contactsAction']);
+                    }
                     break;
                 case 'executeAction':
                     $routeVars = $request->attributes->get('_route_params');

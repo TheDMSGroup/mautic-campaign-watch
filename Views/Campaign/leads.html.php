@@ -35,4 +35,10 @@
             });
         }
     });
+    // Hide any empty charts.
+    mQuery('canvas.chart.line-chart').each(function(){
+        if (mQuery(this).text().trim() === 'null') {
+            mQuery(this).parent().parent().parent().parent().parent().addClass('hide');
+        }
+    });
 </script>
