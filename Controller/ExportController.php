@@ -47,7 +47,8 @@ class ExportController extends CommonController
         $leadModel  = $this->get('mautic.lead.model.lead');
 
         // Edit the next two lines to tweak performance
-        $params['limit'] = 1000;
+        // NB: As the number of extended fields increases, the limit must be reduced to avoid memory exceptions
+        $params['limit'] = 200;
         ini_set('max_execution_time', 0);
 
         $response = new StreamedResponse();
@@ -77,7 +78,7 @@ class ExportController extends CommonController
                         }
                         fputcsv($handle, array_values($contact));
                     }
-                    $start = $start + $params['limit'];
+                    $start += $params['limit'];
                     $this->container->get('doctrine.orm.entity_manager')->clear();
                     gc_enable();
                     gc_collect_cycles();
@@ -113,7 +114,7 @@ class ExportController extends CommonController
                 $q->expr()->eq('lc.campaign_id', ':campaign')
             )
         )
-            ->setParameter('false', false, 'boolean')
+            ->setParameter('false', false, \PDO::PARAM_BOOL)
             ->setParameter('campaign', $campaignId);
 
         $q->andWhere(
@@ -133,6 +134,7 @@ class ExportController extends CommonController
                 }
             }
         }
+
         $result = $q->execute()->fetchAll();
 
         return $result;
