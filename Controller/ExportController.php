@@ -11,77 +11,87 @@
 
 namespace MauticPlugin\MauticCampaignWatchBundle\Controller;
 
+use Doctrine\DBAL\Query\QueryBuilder;
+use Doctrine\ORM\PersistentCollection;
 use Mautic\CampaignBundle\Entity\Campaign;
 use Mautic\CoreBundle\Controller\CommonController;
-use MauticPlugin\MauticSocialBundle\Entity\Lead;
+use Mautic\LeadBundle\Entity\Lead;
+use Mautic\LeadBundle\Model\LeadModel;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Mautic\LeadBundle\Entity\LeadRepository;
 
 /**
  * Class CampaignControllerOverride.
  */
 class ExportController extends CommonController
 {
+    /**
+     * @param int    $campaignId
+     * @param string $dateFrom
+     * @param string $dateTo
+     *
+     * @return array|\Symfony\Component\HttpFoundation\JsonResponse|\Symfony\Component\HttpFoundation\RedirectResponse|\Symfony\Component\HttpFoundation\Response|StreamedResponse
+     */
     public function campaignContactsExportAction($campaignId, $dateFrom, $dateTo)
     {
         if (empty($campaignId)) {
             return $this->notFound('mautic.campaignwatch.export.notfound');
         }
+
         /** @var Campaign $campaign */
-        $campaign = $this->get('mautic.campaign.model.campaign')->getEntity($campaignId);
+        $campaign = $this->getModel('campaign')->getEntity($campaignId);
 
         if (!$this->get('mautic.security')->hasEntityAccess(
             'campaign:items:viewown',
             'campaign:items:viewother',
             $campaign->getCreatedBy()
-        )
-        ) {
+        )) {
             return $this->accessDenied();
         }
+
         // send a stream csv file of the timeline
         $name    = 'ContactsExportFrom'.str_replace(' ', '', $campaign->getName());
-        $params  = $this->convertDateParams($dateFrom, $dateTo);
+        list($dateFrom, $dateTo)  = $this->convertDateParams($dateFrom, $dateTo);
 
-        $contactIds = $this->getCampaignLeadsForExport($campaignId, $params, true);
-        $count      = count($contactIds);
-        $start      = 0;
-        $leadModel  = $this->get('mautic.lead.model.lead');
+        $contactIds = $this->getCampaignLeadIdsForExport($campaignId, $dateFrom, $dateTo);
 
         // Edit the next two lines to tweak performance
         // NB: As the number of extended fields increases, the limit must be reduced to avoid memory exceptions
-        $params['limit'] = 200;
-        ini_set('max_execution_time', 0);
+        $batchSize = 200;
+
+        /** @var LeadRepository $contactRepo */
+        $contactRepo = $this->getModel('lead')->getRepository();
+        $batches = array_chunk($contactIds, $batchSize);
 
         $response = new StreamedResponse();
         $response->setCallback(
-            function () use ($params, $campaignId, $contactIds, $count, $start, $leadModel) {
+            function () use ($contactRepo, $batches) {
+                ini_set('max_execution_time', 0);
+
                 $handle = fopen('php://output', 'w+');
-                $headersWritten = false;
-                while ($start < $count) {
-                    $params['start'] = $start;
-                    $contactIds      = $this->getCampaignLeadsForExport($campaignId, $params, false);
-                    foreach ($contactIds as $contactId) {
-                        $contact = $leadModel->getLead($contactId['lead_id']);
-                        $details = $leadModel->getEntity($contactId['lead_id'])->getProfileFields();
-                        $recentUtmTags    = $this->getUtmTagsByLeadId($contactId['lead_id']);
-                        $dnc = $this->getDoNotContact($contactId['lead_id']);
-                        $contact = array_merge($contact, end($recentUtmTags), $details, $dnc); // use only most recent UTM sources
-                        // insert header row?
-                        if (!$headersWritten) {
-                            $headers = array_keys($contact);
-                            // make sure to add dnc headers since 1st record may not have them
-                            if (empty($dnc)) {
-                                $dnc_headers = ['dnc_date_added', 'dnc_reason', 'dnc_channel', 'dnc_channel_id', 'dnc_comments'];
-                                $headers = array_merge($headers, $dnc_headers);
+
+                $fieldList = [];
+                foreach ($batches as $batch) {
+                    $contacts = $contactRepo->getEntities(['ids' => $batch, 'ignore_paginator' => true]);
+                    $contacts = array_key_exists('results', $contacts) ? $contacts['results'] : $contacts;
+                    /** @var Lead $contact */
+                    foreach ($contacts as $contact) {
+                        if (empty($fieldList)) {
+                            $fieldList = $contact->getFields();
+                            foreach (array_keys($fieldList) as $group) {
+                                foreach($group as $field) {
+                                    $fieldList = array_map(function ($f) {
+                                        return $f['alias'];
+                                    }, $field);
+                                }
                             }
-                            fputcsv($handle, $headers);
-                            $headersWritten = true;
+                            fputcsv($handle, $fieldList);
                         }
-                        fputcsv($handle, array_values($contact));
+                        $fieldValues = array_map([$contact, 'getFieldValue'], $fieldList);
+                        fputcsv($handle, $fieldValues);
+                        unset($contact);
                     }
-                    $start += $params['limit'];
-                    $this->container->get('doctrine.orm.entity_manager')->clear();
-                    gc_enable();
-                    gc_collect_cycles();
+                    //fflush($handle);
                 }
                 fclose($handle);
             }
@@ -95,61 +105,65 @@ class ExportController extends CommonController
     }
 
     /**
-     * Get leads for a specific campaign.
+     * @param int   $campaignId
+     * @param string $dateFrom
+     * @param string $dateTo
      *
-     * @param      $campaignId
-     * @param null $eventId
+     * @return mixed
+     */
+    public function getCampaignLeadIdsForExport($campaignId, $dateFrom, $dateTo)
+    {
+        /** @var QueryBuilder $q */
+        $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder();
+        $q->select('cl.lead_id')
+            ->from('campaign_leads', 'cl')
+            ->join('cl', 'leads', 'l', 'l.id = cl.lead_id')
+            ->where(
+                $q->expr()->eq('cl.manually_removed', ':false'),
+                $q->expr()->eq('cl.campaign_id', ':campaign'),
+                $q->expr()->gte('l.date_identified', ':dateFrom'),
+                $q->expr()->lt('l.date_identified', ':dateTo')
+            )
+            ->setParameter('false', false, \PDO::PARAM_BOOL)
+            ->setParameter('campaign', $campaignId)
+            ->setParameter('dateFrom', $dateFrom)
+            ->setParameter('dateTo', $dateTo);
+
+        $result = $q->execute()->fetchAll();
+        $ids = array_map(function ($a) { return $a['lead_id']; } , $result );
+
+        return $ids;
+    }
+
+    /**
+     * @param string $dateFrom
+     * @param string $dateTo
      *
      * @return array
      */
-    public function getCampaignLeadsForExport($campaignId, $params, $countOnly)
-    {
-        $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
-            ->from('campaign_leads', 'lc')
-            ->select('lc.lead_id')
-            ->leftJoin('lc', MAUTIC_TABLE_PREFIX.'leads', 'l', 'l.id = lc.lead_id');
-        $q->where(
-            $q->expr()->andX(
-                $q->expr()->eq('lc.manually_removed', ':false'),
-                $q->expr()->eq('lc.campaign_id', ':campaign')
-            )
-        )
-            ->setParameter('false', false, \PDO::PARAM_BOOL)
-            ->setParameter('campaign', $campaignId);
-
-        $q->andWhere(
-            $q->expr()->andX(
-                $q->expr()->gte('l.date_identified', ':dateFrom'),
-                $q->expr()->lte('l.date_identified', ':dateTo')
-            )
-        )
-            ->setParameter('dateFrom', $params['dateFrom'])
-            ->setParameter('dateTo', $params['dateTo']);
-
-        if (!$countOnly) {
-            if (!empty($params['limit'])) {
-                $q->setMaxResults($params['limit']);
-                if (!empty($params['start'])) {
-                    $q->setFirstResult($params['start']);
-                }
-            }
-        }
-
-        $result = $q->execute()->fetchAll();
-
-        return $result;
-    }
-
     private function convertDateParams($dateFrom, $dateTo)
     {
-        $dateFromConverted = \DateTime::createFromFormat('M d, Y H:i:s', $dateFrom.'00:00:00')->format('Y-m-d H:i:s');
-        $dateToConverted   = \DateTime::createFromFormat('M d, Y H:i:s', $dateTo.'00:00:00')->format('Y-m-d H:i:s');
+        $timezone = new \DateTimeZone('UTC');
 
-        return ['dateFrom' => $dateFromConverted, 'dateTo' => $dateToConverted];
+        $dateFromConverted = new \DateTime($dateFrom, $timezone);
+
+        $dateToConverted   = new \DateTime($dateTo, $timezone);
+        $dateToConverted->modify('+1 day');
+
+        return [
+            $dateFromConverted->format('Y-m-d H:i:s'),
+            $dateToConverted->format('Y-m-d H:i:s')
+        ];
     }
 
+    /**
+     * @param int $contactId
+     *
+     * @return mixed
+     */
     private function getUtmTagsByLeadId($contactId)
     {
+        /** @var QueryBuilder $q */
         $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
             ->from('lead_utmtags', 'utm')
             ->select('utm.url AS utm_url, utm.utm_campaign, utm.utm_content, utm.utm_medium, utm.utm_source, utm.utm_term');
@@ -162,8 +176,14 @@ class ExportController extends CommonController
         return $result;
     }
 
+    /**
+     * @param int $contactId
+     *
+     * @return mixed
+     */
     private function getDoNotContact($contactId)
     {
+        /** @var QueryBuilder $q */
         $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
             ->from('lead_donotcontact', 'dnc')
             ->select('dnc.date_added AS dnc_dateadded, dnc.reason AS dnc_reason, dnc.channel AS dnc_channel, dnc.channel_id AS dnc_channel_id, dnc.comments AS dnc_comments');
