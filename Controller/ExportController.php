@@ -51,9 +51,11 @@ class ExportController extends CommonController
         $batches = array_chunk($contactIds, 50);
 
         //testing
-        /** @var LeadRepository $contactRepo */
+        /** @var OverrideLeadRepository $contactRepo */
         $contactRepo = $this->get('doctrine.orm.entity_manager')->getRepository('MauticLeadBundle:Lead');
-        //$contactRepo = $this->getModel('lead')->getRepository();
+
+        /** @var LeadRepository $contactRepo */
+        $contactRepo = $this->getModel('lead')->getRepository();
 
         $fileName = sprintf('ContactsExportFrom%s.csv', str_replace(' ', '', trim($campaign->getName())));
 
