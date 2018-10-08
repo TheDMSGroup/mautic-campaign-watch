@@ -13,9 +13,10 @@ namespace MauticPlugin\MauticCampaignWatchBundle\Controller;
 
 use Doctrine\DBAL\Query\QueryBuilder;
 use Mautic\CoreBundle\Controller\CommonController;
+use Mautic\LeadBundle\Entity\Lead;
 use Mautic\LeadBundle\Entity\LeadRepository;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use Mautic\LeadBundle\Entity\Lead;
+
 /**
  * Class CampaignControllerOverride.
  */
@@ -66,25 +67,26 @@ class ExportController extends CommonController
 
                 $fieldNames = [];
                 foreach ($batches as $batch) {
-                   $leads = $contactRepo->getEntitiesWithCustomFields('lead', ['ids' => $batch]);
-                   /**
-                    * @var int $id
-                    * @var Lead $lead
-                    */
+                    $leads = $contactRepo->getEntitiesWithCustomFields('lead', ['ids' => $batch]);
+                    /**
+                     * @var int
+                     * @var Lead $lead
+                     */
                     foreach ($leads as $id => $lead) {
                         if (empty($fieldNames)) {
                             $fields = $lead->getFields(true);
-                            $columnNames = array_map(function ($f) { return $f['label'];}, $fields);
+                            $columnNames = array_map(function ($f) { return $f['label']; }, $fields);
                             $columnNames = array_merge(['Id'], $columnNames);
                             fputcsv($handle, $columnNames);
-                            $fieldNames = array_map(function ($f) { return $f['alias'];}, $fields);
+                            $fieldNames = array_map(function ($f) { return $f['alias']; }, $fields);
                         }
                         $values = [$id];
                         foreach ($fieldNames as $fieldName) {
                             $values[] = $lead->getFieldValue($fieldName);
                         }
-                       fputcsv($handle, $values);
-                }}
+                        fputcsv($handle, $values);
+                    }
+                }
                 fclose($handle);
             },
             200,
