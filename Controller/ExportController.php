@@ -53,12 +53,9 @@ class ExportController extends CommonController
 
         //testing
         /** @var OverrideLeadRepository $contactRepo */
-        $contactRepo = $this->get('doctrine.orm.entity_manager')->getRepository('MauticLeadBundle:Lead');
-
-        /** @var LeadRepository $contactRepo */
         $contactRepo = $this->getModel('lead')->getRepository();
 
-        $fileName = sprintf('ContactsExportFrom%s.csv', str_replace(' ', '', trim($campaign->getName())));
+        $fileName = sprintf('ContactsExportFrom%s.csv', str_replace(' ', '', $campaign->getName()));
 
         $response = new StreamedResponse(
             function () use ($contactRepo, $batches) {
@@ -67,7 +64,8 @@ class ExportController extends CommonController
 
                 $fieldNames = [];
                 foreach ($batches as $batch) {
-                    $leads = $contactRepo->getEntitiesWithCustomFields('lead', ['ids' => $batch]);
+                    //$leads = $contactRepo->getEntitiesWithCustomFields('lead', ['ids' => $batch]);
+                    $leads = $contactRepo->getEntities(['ids' => $batch, '', 'withTotalCounts'=> 0, 'withChannelRules' => 1, 'ignore_paginator' => 1]);
                     /**
                      * @var int
                      * @var Lead $lead
