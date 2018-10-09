@@ -14,7 +14,6 @@ namespace MauticPlugin\MauticCampaignWatchBundle\Controller;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Mautic\CoreBundle\Controller\CommonController;
 use Mautic\LeadBundle\Entity\Lead;
-use Mautic\LeadBundle\Entity\LeadRepository;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -49,7 +48,7 @@ class ExportController extends CommonController
         $contactIds               = $this->getCampaignLeadIdsForExport($campaign->getId(), $dateFrom, $dateTo);
 
         // adjust $size for memory vs. speed
-        $batches = array_chunk($contactIds, 50);
+        $batches = array_chunk($contactIds, 100);
 
         //testing
         /** @var OverrideLeadRepository $contactRepo */
