@@ -39,9 +39,7 @@ class CustomContentSubscriber extends CommonSubscriber
             case 'MauticCampaignBundle:Campaign:details.html.php':
                 switch ($event->getContext()) {
                     case 'tabs':
-                        // Add tab.
-                    case 'tab.content':
-                        // Add tab content.
+                        $event->addTemplate('MauticCampaignWatchBundle:Campaign:export.html.php');
                 }
                 break;
         }
