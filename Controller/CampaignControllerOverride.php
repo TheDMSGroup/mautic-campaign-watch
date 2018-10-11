@@ -18,7 +18,7 @@ use Mautic\CampaignBundle\Controller\CampaignController;
  */
 class CampaignControllerOverride extends CampaignController
 {
-    /**
+    /*
      * Alternative of 'MauticCampaignBundle:Campaign:contacts'
      * Gets contacts as a list.
      *
@@ -46,5 +46,4 @@ class CampaignControllerOverride extends CampaignController
     //         ]
     //     );
     // }
-
 }
