@@ -47,6 +47,10 @@ class ExportController extends CommonController
         list($dateFrom, $dateTo)  = $this->convertDateParams($dateFrom, $dateTo);
         $contactIds               = $this->getCampaignLeadIdsForExport($campaign->getId(), $dateFrom, $dateTo);
 
+        if (empty($contactIds)) {
+            return $this->notFound('mautic.campaignwatch.export.nocontacts');
+        }
+
         // adjust $size for memory vs. speed
         $batches = array_chunk($contactIds, 100);
 
