@@ -47,6 +47,10 @@ class ExportController extends CommonController
         list($dateFrom, $dateTo)  = $this->convertDateParams($dateFrom, $dateTo);
         $contactIds               = $this->getCampaignLeadIdsForExport($campaign->getId(), $dateFrom, $dateTo);
 
+        if (empty($contactIds)) {
+            return $this->notFound('mautic.campaignwatch.export.nocontacts');
+        }
+
         // adjust $size for memory vs. speed
         $batches = array_chunk($contactIds, 100);
 
@@ -112,8 +116,8 @@ class ExportController extends CommonController
             ->where(
                 $q->expr()->eq('cl.manually_removed', ':false'),
                 $q->expr()->eq('cl.campaign_id', ':campaign'),
-                $q->expr()->gte('cl.date_added', ':dateFrom'),
-                $q->expr()->lt('cl.date_added', ':dateTo')
+                $q->expr()->gte('cl.date_added', 'FROM_UNIXTIME(:dateFrom)'),
+                $q->expr()->lt('cl.date_added', 'FROM_UNIXTIME(:dateTo)')
             )
             ->setParameter('false', false, 'boolean')
             ->setParameter('campaign', $campaignId)
@@ -136,16 +140,14 @@ class ExportController extends CommonController
      */
     private function convertDateParams($dateFrom, $dateTo)
     {
-        $timezone = new \DateTimeZone('UTC');
+        $dateFromConverted = new \DateTime($dateFrom);
 
-        $dateFromConverted = new \DateTime($dateFrom, $timezone);
-
-        $dateToConverted   = new \DateTime($dateTo, $timezone);
-        $dateToConverted->modify('+1 day');
+        $dateToConverted   = new \DateTime($dateTo);
+        $dateToConverted->modify('+1 day -1 second');
 
         return [
-            $dateFromConverted->format('Y-m-d H:i:s'),
-            $dateToConverted->format('Y-m-d H:i:s'),
+            $dateFromConverted->getTimestamp(),
+            $dateToConverted->getTimestamp(),
         ];
     }
 
