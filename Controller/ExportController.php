@@ -30,11 +30,15 @@ class ExportController extends CommonController
      */
     public function campaignContactsExportAction($campaignId, $dateFrom, $dateTo)
     {
+        $start = 0;
+        $limit = 10000;
+
         if (empty($campaignId)) {
             return $this->notFound('mautic.campaignwatch.export.notfound');
         }
 
-        $campaign = $this->getModel('campaign')->getEntity($campaignId);
+        $campaignId = (int) $campaignId;
+        $campaign   = $this->getModel('campaign')->getEntity($campaignId);
 
         if (!$this->get('mautic.security')->hasEntityAccess(
             'campaign:items:viewown',
@@ -43,16 +47,14 @@ class ExportController extends CommonController
         )) {
             return $this->accessDenied();
         }
+        $entityManager = $this->get('doctrine.orm.entity_manager');
 
-        list($dateFrom, $dateTo)  = $this->convertDateParams($dateFrom, $dateTo);
-        $contactIds               = $this->getCampaignLeadIdsForExport($campaign->getId(), $dateFrom, $dateTo);
+        list($dateFrom, $dateTo) = $this->convertDateParams($dateFrom, $dateTo);
+        $contactIds              = $this->getCampaignLeadIdsForExport($campaignId, $dateFrom, $dateTo, $start, $limit);
 
         if (empty($contactIds)) {
             return $this->notFound('mautic.campaignwatch.export.nocontacts');
         }
-
-        // adjust $size for memory vs. speed
-        $batches = array_chunk($contactIds, 100);
 
         //testing
         /** @var OverrideLeadRepository $contactRepo */
@@ -61,33 +63,75 @@ class ExportController extends CommonController
         $fileName = sprintf('ContactsExportFrom%s.csv', str_replace(' ', '', $campaign->getName()));
 
         $response = new StreamedResponse(
-            function () use ($contactRepo, $batches) {
+            function () use (
+                $contactRepo,
+                $entityManager,
+                $campaignId,
+                $dateFrom,
+                $dateTo,
+                $start,
+                $limit,
+                $contactIds
+            ) {
                 ini_set('max_execution_time', 0);
                 $handle = fopen('php://output', 'w');
 
-                $fieldNames = [];
-                foreach ($batches as $batch) {
-                    //$leads = $contactRepo->getEntitiesWithCustomFields('lead', ['ids' => $batch]);
-                    $leads = $contactRepo->getEntities(['ids' => $batch, '', 'withTotalCounts'=> 0, 'withChannelRules' => 1, 'ignore_paginator' => 1]);
-                    /**
-                     * @var int
-                     * @var Lead $lead
-                     */
-                    foreach ($leads as $id => $lead) {
-                        if (empty($fieldNames)) {
-                            $fields = $lead->getFields(true);
-                            $columnNames = array_map(function ($f) { return $f['label']; }, $fields);
-                            $columnNames = array_merge(['Id'], $columnNames);
-                            fputcsv($handle, $columnNames);
-                            $fieldNames = array_map(function ($f) { return $f['alias']; }, $fields);
+                while (count($contactIds)) {
+                    $fieldNames = [];
+                    // adjust $size for memory vs. speed
+                    $batches = array_chunk($contactIds, 100);
+                    foreach ($batches as $batch) {
+                        //$leads = $contactRepo->getEntitiesWithCustomFields('lead', ['ids' => $batch]);
+                        $leads = $contactRepo->getEntities(
+                            [
+                                'ids'              => $batch,
+                                '',
+                                'withTotalCounts'  => 0,
+                                'withChannelRules' => 1,
+                                'ignore_paginator' => 1,
+                            ]
+                        );
+                        /**
+                         * @var int
+                         * @var Lead $lead
+                         */
+                        foreach ($leads as $id => $lead) {
+                            if (empty($fieldNames)) {
+                                $fields      = $lead->getFields(true);
+                                $columnNames = array_map(
+                                    function ($f) {
+                                        return $f['label'];
+                                    },
+                                    $fields
+                                );
+                                $columnNames = array_merge(['Id'], $columnNames);
+                                fputcsv($handle, $columnNames);
+                                $fieldNames = array_map(
+                                    function ($f) {
+                                        return $f['alias'];
+                                    },
+                                    $fields
+                                );
+                            }
+                            $values = [$id];
+                            foreach ($fieldNames as $fieldName) {
+                                $values[] = $lead->getFieldValue($fieldName);
+                            }
+                            fputcsv($handle, $values);
                         }
-                        $values = [$id];
-                        foreach ($fieldNames as $fieldName) {
-                            $values[] = $lead->getFieldValue($fieldName);
-                        }
-                        fputcsv($handle, $values);
+                        $entityManager->flush();
+                        $entityManager->clear();
                     }
+                    $start += count($contactIds);
+                    $contactIds = $this->getCampaignLeadIdsForExport(
+                        $campaignId,
+                        $dateFrom,
+                        $dateTo,
+                        $start,
+                        $limit
+                    );
                 }
+
                 fclose($handle);
             },
             200,
@@ -101,13 +145,34 @@ class ExportController extends CommonController
     }
 
     /**
-     * @param int    $campaignId
      * @param string $dateFrom
      * @param string $dateTo
      *
+     * @return array
+     */
+    private function convertDateParams($dateFrom, $dateTo)
+    {
+        $dateFromConverted = new \DateTime($dateFrom);
+
+        $dateToConverted = new \DateTime($dateTo);
+        $dateToConverted->modify('+1 day -1 second');
+
+        return [
+            $dateFromConverted->getTimestamp(),
+            $dateToConverted->getTimestamp(),
+        ];
+    }
+
+    /**
+     * @param int    $campaignId
+     * @param string $dateFrom
+     * @param string $dateTo
+     * @param int    $first
+     * @param int    $limit
+     *
      * @return mixed
      */
-    public function getCampaignLeadIdsForExport($campaignId, $dateFrom, $dateTo)
+    public function getCampaignLeadIdsForExport($campaignId, $dateFrom, $dateTo, $first = 0, $limit = 10000)
     {
         /** @var QueryBuilder $q */
         $q = $this->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder();
@@ -122,7 +187,9 @@ class ExportController extends CommonController
             ->setParameter('false', false, 'boolean')
             ->setParameter('campaign', $campaignId)
             ->setParameter('dateFrom', $dateFrom)
-            ->setParameter('dateTo', $dateTo);
+            ->setParameter('dateTo', $dateTo)
+            ->setFirstResult($first)
+            ->setMaxResults($limit);
 
         $result = $q->execute()->fetchAll();
         if (!empty($result)) {
@@ -130,25 +197,6 @@ class ExportController extends CommonController
         }
 
         return $contactIds;
-    }
-
-    /**
-     * @param string $dateFrom
-     * @param string $dateTo
-     *
-     * @return array
-     */
-    private function convertDateParams($dateFrom, $dateTo)
-    {
-        $dateFromConverted = new \DateTime($dateFrom);
-
-        $dateToConverted   = new \DateTime($dateTo);
-        $dateToConverted->modify('+1 day -1 second');
-
-        return [
-            $dateFromConverted->getTimestamp(),
-            $dateToConverted->getTimestamp(),
-        ];
     }
 
     /**
@@ -161,9 +209,11 @@ class ExportController extends CommonController
         /** @var QueryBuilder $q */
         $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
             ->from('lead_utmtags', 'utm')
-            ->select('utm.url AS utm_url, utm.utm_campaign, utm.utm_content, utm.utm_medium, utm.utm_source, utm.utm_term');
+            ->select(
+                'utm.url AS utm_url, utm.utm_campaign, utm.utm_content, utm.utm_medium, utm.utm_source, utm.utm_term'
+            );
         $q->where(
-                $q->expr()->eq('utm.lead_id', ':contact')
+            $q->expr()->eq('utm.lead_id', ':contact')
         )
             ->setParameter('contact', $contactId);
         $result = $q->execute()->fetchAll();
@@ -181,7 +231,9 @@ class ExportController extends CommonController
         /** @var QueryBuilder $q */
         $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
             ->from('lead_donotcontact', 'dnc')
-            ->select('dnc.date_added AS dnc_dateadded, dnc.reason AS dnc_reason, dnc.channel AS dnc_channel, dnc.channel_id AS dnc_channel_id, dnc.comments AS dnc_comments');
+            ->select(
+                'dnc.date_added AS dnc_dateadded, dnc.reason AS dnc_reason, dnc.channel AS dnc_channel, dnc.channel_id AS dnc_channel_id, dnc.comments AS dnc_comments'
+            );
         $q->where(
             $q->expr()->eq('dnc.lead_id', ':contact')
         )
