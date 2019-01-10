@@ -172,7 +172,7 @@ class ExportController extends CommonController
      *
      * @return mixed
      */
-    public function getCampaignLeadIdsForExport($campaignId, $dateFrom, $dateTo, $first = 0, $limit = 10000)
+    public function getCampaignLeadIdsForExport($campaignId, $dateFrom, $dateTo, $first = 0, $limit = 1000)
     {
         /** @var QueryBuilder $q */
         $q = $this->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder();
