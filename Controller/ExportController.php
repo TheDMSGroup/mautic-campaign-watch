@@ -31,7 +31,7 @@ class ExportController extends CommonController
     public function campaignContactsExportAction($campaignId, $dateFrom, $dateTo)
     {
         $start = 0;
-        $limit = 10000;
+        $limit = 1000;
 
         if (empty($campaignId)) {
             return $this->notFound('mautic.campaignwatch.export.notfound');
