@@ -41,8 +41,8 @@ class ExportController extends CommonController
         $campaign   = $this->getModel('campaign')->getEntity($campaignId);
 
         if (!$this->get('mautic.security')->hasEntityAccess(
-            'campaign:items:viewown',
-            'campaign:items:viewother',
+            'campaign:campaigns:viewown',
+            'campaign:campaigns:viewother',
             $campaign->getCreatedBy()
         )) {
             return $this->accessDenied();
