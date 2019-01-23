@@ -104,7 +104,7 @@ class ExportController extends CommonController
                                     },
                                     $fields
                                 );
-                                $columnNames = array_merge(['Id'], $columnNames);
+                                $columnNames = array_merge(['Id', 'IP'], $columnNames);
                                 fputcsv($handle, $columnNames);
                                 $fieldNames = array_map(
                                     function ($f) {
@@ -113,7 +113,8 @@ class ExportController extends CommonController
                                     $fields
                                 );
                             }
-                            $values = [$id];
+                            $ip = $lead->getIpAddresses()->last()->getIpAddress();
+                            $values = [$id, $ip];
                             foreach ($fieldNames as $fieldName) {
                                 $values[] = $lead->getFieldValue($fieldName);
                             }
