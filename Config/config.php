@@ -34,6 +34,14 @@ return [
             'mautic.campaignwatch.subscriber.customcontent' => [
                 'class' => 'MauticPlugin\MauticCampaignWatchBundle\EventListener\CustomContentSubscriber',
             ],
+            'mautic.campaignwatch.reportbundle.subscriber' => [
+                'class'     => 'MauticPlugin\MauticCampaignWatchBundle\EventListener\ReportSubscriber',
+                'arguments' => [
+                    'mautic.lead.model.lead',
+                    'mautic.campaign.model.campaign',
+                    'mautic.lead.reportbundle.fields_builder',
+                ],
+            ],
         ],
     ],
 ];
