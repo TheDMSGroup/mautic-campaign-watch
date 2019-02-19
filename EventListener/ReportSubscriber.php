@@ -191,7 +191,7 @@ class ReportSubscriber extends CommonSubscriber
         }
 
         if ($event->checkContext(self::CONTEXT_CAMPAIGN_WATCH_LEADCAMPAIGN_STATS)) {
-            $qb->leftJoin('l', MAUTIC_TABLE_PREFIX.'campaign_leads', 'cl', 'cl.lead_id = l.id')
+            $qb->leftJoin('l', MAUTIC_TABLE_PREFIX.'campaign_leads', 'cl', 'cl.lead_id = l.id', 'date_added')
                 ->leftJoin('cl', MAUTIC_TABLE_PREFIX.'campaigns', 'c', 'c.id = cl.campaign_id')
                 ->leftjoin('l', MAUTIC_TABLE_PREFIX.'lead_utmtags', 'u', 'l.id = u.lead_id');
         } else {
@@ -199,17 +199,22 @@ class ReportSubscriber extends CommonSubscriber
         }
 
         if (empty($dateFrom)) {
-            $dateFrom = new \DateTime();
+            $dateFrom = new \DateTime('now midnight', new \DateTimeZone('UTC'));
             $dateFrom->modify($dateShift);
         }
 
         if (empty($dateTo)) {
-            $dateTo = new \DateTime();
+            $dateTo = new \DateTime('now midnight -1 sec', new \DateTimeZone('UTC'));
         }
 
-        $qb->andWhere('cl.date_added BETWEEN :dateFrom AND :dateTo')
-            ->setParameter('dateFrom', $dateFrom->format('Y-m-d H:i:s'))
-            ->setParameter('dateTo', $dateTo->format('Y-m-d H:i:s'));
+        $dateFromShifted = new \DateTime($dateFrom->format('Y-m-d H:i:s'), new \DateTimeZone($this->factory->getParameter('default_timezone')));
+        $dateToShifted = new \DateTime($dateTo->format('Y-m-d H:i:s'), new \DateTimeZone($this->factory->getParameter('default_timezone')));
+
+
+
+        $qb->andWhere('cl.date_added BETWEEN FROM_UNIXTIME(:dateFrom) AND FROM_UNIXTIME(:dateTo)')
+            ->setParameter('dateFrom', $dateFromShifted->getTimestamp())
+            ->setParameter('dateTo', $dateToShifted->getTimestamp());
 
         $qb->from(MAUTIC_TABLE_PREFIX.'leads', 'l');
 
