@@ -191,7 +191,7 @@ class ReportSubscriber extends CommonSubscriber
         }
 
         if ($event->checkContext(self::CONTEXT_CAMPAIGN_WATCH_LEADCAMPAIGN_STATS)) {
-            $qb->leftJoin('l', MAUTIC_TABLE_PREFIX.'campaign_leads', 'cl', 'cl.lead_id = l.id', 'date_added')
+            $qb->leftJoin('l', MAUTIC_TABLE_PREFIX.'campaign_leads', 'cl', 'cl.lead_id = l.id')
                 ->leftJoin('cl', MAUTIC_TABLE_PREFIX.'campaigns', 'c', 'c.id = cl.campaign_id')
                 ->leftjoin('l', MAUTIC_TABLE_PREFIX.'lead_utmtags', 'u', 'l.id = u.lead_id');
         } else {
