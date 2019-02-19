@@ -208,9 +208,7 @@ class ReportSubscriber extends CommonSubscriber
         }
 
         $dateFromShifted = new \DateTime($dateFrom->format('Y-m-d H:i:s'), new \DateTimeZone($this->factory->getParameter('default_timezone')));
-        $dateToShifted = new \DateTime($dateTo->format('Y-m-d H:i:s'), new \DateTimeZone($this->factory->getParameter('default_timezone')));
-
-
+        $dateToShifted   = new \DateTime($dateTo->format('Y-m-d H:i:s'), new \DateTimeZone($this->factory->getParameter('default_timezone')));
 
         $qb->andWhere('cl.date_added BETWEEN FROM_UNIXTIME(:dateFrom) AND FROM_UNIXTIME(:dateTo)')
             ->setParameter('dateFrom', $dateFromShifted->getTimestamp())
