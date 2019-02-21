@@ -199,17 +199,20 @@ class ReportSubscriber extends CommonSubscriber
         }
 
         if (empty($dateFrom)) {
-            $dateFrom = new \DateTime();
+            $dateFrom = new \DateTime('now midnight', new \DateTimeZone('UTC'));
             $dateFrom->modify($dateShift);
         }
 
         if (empty($dateTo)) {
-            $dateTo = new \DateTime();
+            $dateTo = new \DateTime('now midnight -1 sec', new \DateTimeZone('UTC'));
         }
 
-        $qb->andWhere('cl.date_added BETWEEN :dateFrom AND :dateTo')
-            ->setParameter('dateFrom', $dateFrom->format('Y-m-d H:i:s'))
-            ->setParameter('dateTo', $dateTo->format('Y-m-d H:i:s'));
+        $dateFromShifted = new \DateTime($dateFrom->format('Y-m-d H:i:s'), new \DateTimeZone($this->factory->getParameter('default_timezone')));
+        $dateToShifted   = new \DateTime($dateTo->format('Y-m-d H:i:s'), new \DateTimeZone($this->factory->getParameter('default_timezone')));
+
+        $qb->andWhere('cl.date_added BETWEEN FROM_UNIXTIME(:dateFrom) AND FROM_UNIXTIME(:dateTo)')
+            ->setParameter('dateFrom', $dateFromShifted->getTimestamp())
+            ->setParameter('dateTo', $dateToShifted->getTimestamp());
 
         $qb->from(MAUTIC_TABLE_PREFIX.'leads', 'l');
 
