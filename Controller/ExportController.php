@@ -113,7 +113,8 @@ class ExportController extends CommonController
                                     $fields
                                 );
                             }
-                            $ip = $lead->getIpAddresses()->last()->getIpAddress();
+                            $ipAddresses = $lead->getIpAddresses()->last();
+                            $ip = !IpAddresses ? '' : $ipAddresses->getIpAddress();
                             $values = [$id, $ip];
                             foreach ($fieldNames as $fieldName) {
                                 $values[] = $lead->getFieldValue($fieldName);
