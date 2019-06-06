@@ -132,7 +132,7 @@ class ExportController extends CommonController
                             }
 
                             // This code is bad and so am i
-                            $iSuckAtCoding = function ($data, &$values) {
+                            $iSuckAtCoding = function ($data) use ($values, $lead) {
                                 foreach ($data as $row) {
                                     if ($row['lead_id'] == $lead->getId()) {
                                         foreach ($row as $k => $val) {
@@ -143,8 +143,8 @@ class ExportController extends CommonController
                                     }
                                 }
                             };
-                            $iSuckAtCoding($utmValues, $values);
-                            $iSuckAtCoding($deviceValues, $values);
+                            $iSuckAtCoding($utmValues);
+                            $iSuckAtCoding($deviceValues);
 
                             fputcsv($handle, $values);
                         }
@@ -175,7 +175,7 @@ class ExportController extends CommonController
 
     private function normalizeKeys($data, $ignore = [])
     {
-        if (!is_array($data)) {
+        if (!is_array($data) || empty($data)) {
             return [];
         }
 
