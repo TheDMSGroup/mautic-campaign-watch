@@ -94,10 +94,10 @@ class ExportController extends CommonController
                         );
 
                         $utmValues = $this->getUtmTagsByLeadIds($batch);
-                        $utmFields = $this->normalizeKeys($utmValues, ['lead_id']);
+                        $utmFields = $this->getFieldNames($utmValues, ['lead_id']);
 
                         $deviceValues = $this->getDeviceDataByLeadIds($batch);
-                        $deviceFields = $this->normalizeKeys($deviceValues, ['lead_id']);
+                        $deviceFields = $this->getFieldNames($deviceValues, ['lead_id']);
 
                         /**
                          * @var int
@@ -165,15 +165,15 @@ class ExportController extends CommonController
             },
             200,
             [
-                /* 'Content-Type'        => 'application/csv; charset=utf-8', */
-                /* 'Content-Disposition' => 'attachment; filename="'.$fileName.'"', */
+                'Content-Type'        => 'application/csv; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
             ]
         );
 
         return $response;
     }
 
-    private function normalizeKeys($data, $ignore = [])
+    private function getFieldNames($data, $ignore = [])
     {
         if (!is_array($data) || empty($data)) {
             return [];
