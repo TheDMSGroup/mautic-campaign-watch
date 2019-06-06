@@ -12,8 +12,10 @@
 namespace MauticPlugin\MauticCampaignWatchBundle\Controller;
 
 use Doctrine\DBAL\Query\QueryBuilder;
+use Doctrine\DBAL\Types\Type;
 use Mautic\CoreBundle\Controller\CommonController;
 use Mautic\LeadBundle\Entity\Lead;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -30,6 +32,7 @@ class ExportController extends CommonController
      */
     public function campaignContactsExportAction($campaignId, $dateFrom, $dateTo)
     {
+
         $start = 0;
         $limit = 1000;
 
@@ -62,6 +65,8 @@ class ExportController extends CommonController
 
         $fileName = sprintf('ContactsExportFrom%s.csv', str_replace(' ', '', $campaign->getName()));
 
+                        
+
         $response = new StreamedResponse(
             function () use (
                 $contactRepo,
@@ -82,6 +87,7 @@ class ExportController extends CommonController
                     $batches = array_chunk($contactIds, 100);
                     foreach ($batches as $batch) {
                         //$leads = $contactRepo->getEntitiesWithCustomFields('lead', ['ids' => $batch]);
+                        /** @var OverrideLeadRepository $contactRepo */
                         $leads = $contactRepo->getEntities(
                             [
                                 'ids'              => $batch,
@@ -91,11 +97,20 @@ class ExportController extends CommonController
                                 'ignore_paginator' => 1,
                             ]
                         );
+
+                        $utmValues = $this->getUtmTagsByLeadIds($batch);
+                        $utmFields = [];
+                        foreach(array_keys(reset($utmValues)) as $key) {
+                            if($key !== "lead_id") { 
+                                $utmFields[$key] = implode(' ', array_map(function($i) {return ucfirst($i);}, explode('_', $key)));
+                            }
+                        }
+                        
                         /**
                          * @var int
                          * @var Lead $lead
                          */
-                        foreach ($leads as $id => $lead) {
+                        foreach ($leads as $id => $lead) { 
                             if (empty($fieldNames)) {
                                 $fields      = $lead->getFields(true);
                                 $columnNames = array_map(
@@ -105,6 +120,7 @@ class ExportController extends CommonController
                                     $fields
                                 );
                                 $columnNames = array_merge(['Id', 'IP'], $columnNames);
+                                $columnNames = array_merge($columnNames, $utmFields);
                                 fputcsv($handle, $columnNames);
                                 $fieldNames = array_map(
                                     function ($f) {
@@ -118,6 +134,17 @@ class ExportController extends CommonController
                             $values = [$id, $ip];
                             foreach ($fieldNames as $fieldName) {
                                 $values[] = $lead->getFieldValue($fieldName);
+                            }
+
+                            // This code is bad and so am i
+                            foreach($utmValues as $row) {
+                                if($row['lead_id'] == $lead->getId()) {
+                                    foreach($row as $k => $val) {
+                                        if($k !== 'lead_id') {
+                                            $values[] = $val;
+                                        }
+                                    }
+                                }
                             }
                             fputcsv($handle, $values);
                         }
@@ -138,12 +165,32 @@ class ExportController extends CommonController
             },
             200,
             [
-                'Content-Type'        => 'application/csv; charset=utf-8',
-                'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
+                /* 'Content-Type'        => 'application/csv; charset=utf-8', */
+                /* 'Content-Disposition' => 'attachment; filename="'.$fileName.'"', */
             ]
         );
 
         return $response;
+    }
+
+    /**
+     * @param array $contactId
+     *
+     * @return mixed
+     */
+    private function getUtmTagsByLeadIds($contactIds)
+    {
+        /** @var QueryBuilder $q */
+        $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
+            ->from('lead_utmtags', 'utm')
+            ->select(
+                'lead_id, utm.url AS utm_url, utm.utm_campaign, utm.utm_content, utm.utm_medium, utm.utm_source, utm.utm_term '
+            );
+        $q->where($q->expr()->in('utm.lead_id', $contactIds));
+
+        $result = $q->execute()->fetchAll();
+
+        return $result;
     }
 
     /**
@@ -200,28 +247,6 @@ class ExportController extends CommonController
         }
 
         return $contactIds;
-    }
-
-    /**
-     * @param int $contactId
-     *
-     * @return mixed
-     */
-    private function getUtmTagsByLeadId($contactId)
-    {
-        /** @var QueryBuilder $q */
-        $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
-            ->from('lead_utmtags', 'utm')
-            ->select(
-                'utm.url AS utm_url, utm.utm_campaign, utm.utm_content, utm.utm_medium, utm.utm_source, utm.utm_term'
-            );
-        $q->where(
-            $q->expr()->eq('utm.lead_id', ':contact')
-        )
-            ->setParameter('contact', $contactId);
-        $result = $q->execute()->fetchAll();
-
-        return $result;
     }
 
     /**
