@@ -131,8 +131,7 @@ class ExportController extends CommonController
                                 $values[] = $lead->getFieldValue($fieldName);
                             }
 
-                            // This code is bad and so am i
-                            $iSuckAtCoding = function ($data) use ($values, $lead) {
+                            $addExtras = function ($data) use ($values, $lead) {
                                 foreach ($data as $row) {
                                     if ($row['lead_id'] == $lead->getId()) {
                                         foreach ($row as $k => $val) {
@@ -143,8 +142,8 @@ class ExportController extends CommonController
                                     }
                                 }
                             };
-                            $iSuckAtCoding($utmValues);
-                            $iSuckAtCoding($deviceValues);
+                            $addExtras($utmValues);
+                            $addExtras($deviceValues);
 
                             fputcsv($handle, $values);
                         }
@@ -182,7 +181,6 @@ class ExportController extends CommonController
         $keys = [];
         foreach (array_keys(reset($data)) as $key) {
             if (!in_array($key, $ignore)) {
-                // ARE YOU NOT ENTERTAINED?!?!!?
                 $keys[$key] = implode(' ', array_map(function ($i) {return ucfirst($i); }, explode('_', $key)));
             }
         }
