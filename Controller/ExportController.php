@@ -12,10 +12,8 @@
 namespace MauticPlugin\MauticCampaignWatchBundle\Controller;
 
 use Doctrine\DBAL\Query\QueryBuilder;
-use Doctrine\DBAL\Types\Type;
 use Mautic\CoreBundle\Controller\CommonController;
 use Mautic\LeadBundle\Entity\Lead;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -32,7 +30,6 @@ class ExportController extends CommonController
      */
     public function campaignContactsExportAction($campaignId, $dateFrom, $dateTo)
     {
-
         $start = 0;
         $limit = 1000;
 
@@ -64,8 +61,6 @@ class ExportController extends CommonController
         $contactRepo = $this->getModel('lead')->getRepository();
 
         $fileName = sprintf('ContactsExportFrom%s.csv', str_replace(' ', '', $campaign->getName()));
-
-                        
 
         $response = new StreamedResponse(
             function () use (
@@ -99,18 +94,16 @@ class ExportController extends CommonController
                         );
 
                         $utmValues = $this->getUtmTagsByLeadIds($batch);
-                        $utmFields = [];
-                        foreach(array_keys(reset($utmValues)) as $key) {
-                            if($key !== "lead_id") { 
-                                $utmFields[$key] = implode(' ', array_map(function($i) {return ucfirst($i);}, explode('_', $key)));
-                            }
-                        }
-                        
+                        $utmFields = $this->normalizeKeys($utmValues, ['lead_id']);
+
+                        $deviceValues = $this->getDeviceDataByLeadIds($batch);
+                        $deviceFields = $this->normalizeKeys($deviceValues, ['lead_id']);
+
                         /**
                          * @var int
                          * @var Lead $lead
                          */
-                        foreach ($leads as $id => $lead) { 
+                        foreach ($leads as $id => $lead) {
                             if (empty($fieldNames)) {
                                 $fields      = $lead->getFields(true);
                                 $columnNames = array_map(
@@ -121,6 +114,8 @@ class ExportController extends CommonController
                                 );
                                 $columnNames = array_merge(['Id', 'IP'], $columnNames);
                                 $columnNames = array_merge($columnNames, $utmFields);
+                                $columnNames = array_merge($columnNames, $deviceFields);
+
                                 fputcsv($handle, $columnNames);
                                 $fieldNames = array_map(
                                     function ($f) {
@@ -137,15 +132,20 @@ class ExportController extends CommonController
                             }
 
                             // This code is bad and so am i
-                            foreach($utmValues as $row) {
-                                if($row['lead_id'] == $lead->getId()) {
-                                    foreach($row as $k => $val) {
-                                        if($k !== 'lead_id') {
-                                            $values[] = $val;
+                            $iSuckAtCoding = function ($data, &$values) {
+                                foreach ($data as $row) {
+                                    if ($row['lead_id'] == $lead->getId()) {
+                                        foreach ($row as $k => $val) {
+                                            if ('lead_id' !== $k) {
+                                                $values[] = $val;
+                                            }
                                         }
                                     }
                                 }
-                            }
+                            };
+                            $iSuckAtCoding($utmValues, $values);
+                            $iSuckAtCoding($deviceValues, $values);
+
                             fputcsv($handle, $values);
                         }
                         $entityManager->flush();
@@ -171,6 +171,47 @@ class ExportController extends CommonController
         );
 
         return $response;
+    }
+
+    private function normalizeKeys($data, $ignore = [])
+    {
+        if (!is_array($data)) {
+            return [];
+        }
+
+        $keys = [];
+        foreach (array_keys(reset($data)) as $key) {
+            if (!in_array($key, $ignore)) {
+                // ARE YOU NOT ENTERTAINED?!?!!?
+                $keys[$key] = implode(' ', array_map(function ($i) {return ucfirst($i); }, explode('_', $key)));
+            }
+        }
+
+        return $keys;
+    }
+
+    private function getDeviceDataByLeadIds($contactIds)
+    {
+        /** @var QueryBuilder $q */
+        $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
+                  ->select([
+                      'client_info',
+                      'device',
+                      'device_os_name',
+                      'device_os_shortname',
+                      'device_os_version',
+                      'device_os_platform',
+                      'device_brand',
+                      'device_model',
+                      'device_fingerprint',
+                      'tracking_id',
+                  ])
+            ->from('lead_devices', 'd');
+        $q->where($q->expr()->in('d.lead_id', $contactIds));
+
+        $result = $q->execute()->fetchAll();
+
+        return $result;
     }
 
     /**
