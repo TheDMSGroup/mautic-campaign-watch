@@ -163,7 +163,7 @@ class ExportController extends CommonController
                                 // If the lead doesn't have that row, then just
                                 // add blanks to fill in.
                                 for ($i=0; $i < count($dataFields); ++$i) {
-                                    $values[] = 'blank';
+                                    $values[] = '';
                                 }
                             };
                             $addExtras($utmValues, $utmFields);
