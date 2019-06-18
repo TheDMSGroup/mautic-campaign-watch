@@ -82,6 +82,7 @@ class ExportController extends CommonController
                     $batches = array_chunk($contactIds, 100);
                     foreach ($batches as $batch) {
                         //$leads = $contactRepo->getEntitiesWithCustomFields('lead', ['ids' => $batch]);
+                        /** @var OverrideLeadRepository $contactRepo */
                         $leads = $contactRepo->getEntities(
                             [
                                 'ids'              => $batch,
@@ -91,6 +92,30 @@ class ExportController extends CommonController
                                 'ignore_paginator' => 1,
                             ]
                         );
+
+                        $utmValues = $this->getUtmTagsByLeadIds($batch);
+                        $utmFields = [
+                            'utm_url'      => 'UTM URL',
+                            'utm_campaign' => 'UTM Campaign',
+                            'utm_content'  => 'UTM Content',
+                            'utm_medium'   => 'UTM Medium',
+                            'utm_source'   => 'UTM Source',
+                            'utm_term'     => 'UTM Term',
+                        ];
+
+                        $deviceValues = $this->getDeviceDataByLeadIds($batch);
+                        $deviceFields = [
+                            'device'              => 'Device',
+                            'device_os_name'      => 'Device OS Name',
+                            'device_os_shortname' => 'Device OS Shortname',
+                            'device_os_version'   => 'Device OS Version',
+                            'device_os_platform'  => 'Device OS Platform',
+                            'device_brand'        => 'Device Brand',
+                            'device_model'        => 'Device Model',
+                            'device_fingerprint'  => 'Device Fingerprint',
+                            'tracking_id'         => 'Tracking ID',
+                        ];
+
                         /**
                          * @var int
                          * @var Lead $lead
@@ -105,6 +130,9 @@ class ExportController extends CommonController
                                     $fields
                                 );
                                 $columnNames = array_merge(['Id', 'IP'], $columnNames);
+                                $columnNames = array_merge($columnNames, $utmFields);
+                                $columnNames = array_merge($columnNames, $deviceFields);
+
                                 fputcsv($handle, $columnNames);
                                 $fieldNames = array_map(
                                     function ($f) {
@@ -119,6 +147,28 @@ class ExportController extends CommonController
                             foreach ($fieldNames as $fieldName) {
                                 $values[] = $lead->getFieldValue($fieldName);
                             }
+
+                            $addExtras = function ($data, $dataFields) use (&$values, &$lead) {
+                                foreach ($data as $row) {
+                                    if (isset($row['lead_id']) && $row['lead_id'] == $lead->getId()) {
+                                        foreach ($row as $k => $val) {
+                                            if ('lead_id' !== $k) {
+                                                $values[] = $val;
+                                            }
+                                        }
+
+                                        return;
+                                    }
+                                }
+                                // If the lead doesn't have that row, then just
+                                // add blanks to fill in.
+                                for ($i=0; $i < count($dataFields); ++$i) {
+                                    $values[] = '';
+                                }
+                            };
+                            $addExtras($utmValues, $utmFields);
+                            $addExtras($deviceValues, $deviceFields);
+
                             fputcsv($handle, $values);
                         }
                         $entityManager->flush();
@@ -144,6 +194,56 @@ class ExportController extends CommonController
         );
 
         return $response;
+    }
+
+    private function getDeviceDataByLeadIds($contactIds)
+    {
+        /** @var QueryBuilder $q */
+        $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
+                  ->select([
+                      'lead_id',
+                      'device',
+                      'device_os_name',
+                      'device_os_shortname',
+                      'device_os_version',
+                      'device_os_platform',
+                      'device_brand',
+                      'device_model',
+                      'device_fingerprint',
+                      'tracking_id',
+                  ])
+            ->from('lead_devices', 'd');
+        $q->where($q->expr()->in('d.lead_id', $contactIds));
+
+        $result = $q->execute()->fetchAll();
+
+        return $result;
+    }
+
+    /**
+     * @param array $contactId
+     *
+     * @return mixed
+     */
+    private function getUtmTagsByLeadIds($contactIds)
+    {
+        /** @var QueryBuilder $q */
+        $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
+            ->from('lead_utmtags', 'utm')
+            ->select(
+                'lead_id,
+                 utm.url AS utm_url,
+                 utm.utm_campaign,
+                 utm.utm_content,
+                 utm.utm_medium,
+                 utm.utm_source,
+                 utm.utm_term '
+            );
+        $q->where($q->expr()->in('utm.lead_id', $contactIds));
+
+        $result = $q->execute()->fetchAll();
+
+        return $result;
     }
 
     /**
@@ -200,28 +300,6 @@ class ExportController extends CommonController
         }
 
         return $contactIds;
-    }
-
-    /**
-     * @param int $contactId
-     *
-     * @return mixed
-     */
-    private function getUtmTagsByLeadId($contactId)
-    {
-        /** @var QueryBuilder $q */
-        $q = $this->container->get('doctrine.orm.entity_manager')->getConnection()->createQueryBuilder()
-            ->from('lead_utmtags', 'utm')
-            ->select(
-                'utm.url AS utm_url, utm.utm_campaign, utm.utm_content, utm.utm_medium, utm.utm_source, utm.utm_term'
-            );
-        $q->where(
-            $q->expr()->eq('utm.lead_id', ':contact')
-        )
-            ->setParameter('contact', $contactId);
-        $result = $q->execute()->fetchAll();
-
-        return $result;
     }
 
     /**
